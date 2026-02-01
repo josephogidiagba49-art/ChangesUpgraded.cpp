@@ -8,29 +8,27 @@ jobs:
     
     steps:
     - name: Create C++ file
+      shell: cmd
       run: |
         echo #include <windows.h> > app.cpp
-        echo int main() { return 0; } >> app.cpp
+        echo int main() { MessageBox(0, "GOD MODE", "Success", 0); return 0; } >> app.cpp
     
-    - name: Compile
+    - name: Compile with Visual Studio
+      shell: cmd
       run: |
-        # Use the Developer Command Prompt
-        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64
+        cl app.cpp /Fe:godmode.exe /EHsc /nologo
         
-        # Compile
-        cl app.cpp /Fe:myapp.exe /EHsc
-        
-        # Check if file exists
-        if exist myapp.exe (
-          echo SUCCESS
-          dir myapp.exe
+        if exist godmode.exe (
+          echo ✅ SUCCESS: EXE created!
+          dir godmode.exe
         ) else (
-          echo FAILED
+          echo ❌ FAILED
           exit 1
         )
     
-    - name: Upload
+    - name: Upload EXE
       uses: actions/upload-artifact@v4
       with:
-        name: myapp-exe
-        path: myapp.exe
+        name: GODMODE-EXE
+        path: godmode.exe
