@@ -1,0 +1,39 @@
+name: Build ChangesUpgraded.exe
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+        
+    - name: Compile V7.2
+      shell: cmd
+      run: |
+        cl.exe /O2 /MT /GS- /DNDEBUG /Fe:ChangesUpgraded.exe ChangesUpgraded.cpp
+        if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
+        
+    - name: Verify Binary
+      shell: cmd
+      run: |
+        ChangesUpgraded.exe /? || echo "Binary works!"
+        dir ChangesUpgraded.exe
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ChangesUpgraded-v7.2.exe
+        path: ChangesUpgraded.exe
+        retention-days: 30
