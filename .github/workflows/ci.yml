@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch:
 
 jobs:
   build:
@@ -33,13 +33,10 @@ jobs:
       run: |
         echo Current directory:
         cd
-        
         echo Files in directory:
         dir
-        
         echo Compiling...
         cl test.cpp /Fe:output.exe /EHsc /nologo
-        
         if exist output.exe (
           echo ✅ COMPILATION SUCCESSFUL!
           echo File created: output.exe
@@ -47,7 +44,6 @@ jobs:
         ) else (
           echo ❌ COMPILATION FAILED
           echo Trying alternative method...
-          # Try different compilation
           cl test.cpp /Fe:output.exe
           if exist output.exe (
             echo ✅ Alternative method worked!
@@ -67,21 +63,10 @@ jobs:
         $repo = "${{ github.repository }}"
         $runId = "${{ github.run_id }}"
         $runNumber = "${{ github.run_number }}"
-        
-        $message = @"
-✅ Build Successful!
-
-Repository: $repo
-Run ID: $runId
-Run Number: $runNumber
-
-Download the EXE from GitHub Actions artifacts.
-"@
-        
+        $message = "✅ Build Successful!`nRepository: $repo`nRun ID: $runId`nRun Number: $runNumber`nDownload the EXE from GitHub Actions artifacts."
         $url = "https://api.telegram.org/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendMessage"
         $body = @{
             chat_id = "7845441585"
             text = $message
         }
-        
         Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
