@@ -9,19 +9,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup MSBuild Environment
+    - name: Setup Visual Studio Environment
       uses: microsoft/setup-msbuild@v2
-      # This sets up the Visual Studio environment variables
     
-    - name: Compile GOD-MODE
+    - name: Compile C++ Code
       shell: cmd
       run: |
-        cl ChangesUpgraded.cpp /Fe:ChangesUpgraded.exe /O2 /EHsc /std:c++17
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        cl ChangesUpgraded.cpp /Fe:ChangesUpgraded.exe /O2 /EHsc /std:c++17 /W4
         if exist ChangesUpgraded.exe (
-          echo "Build successful!"
+          echo Build successful!
           dir ChangesUpgraded.exe
         ) else (
-          echo "Build failed!"
+          echo Build failed!
           exit 1
         )
     
