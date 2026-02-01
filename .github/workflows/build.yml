@@ -1,16 +1,37 @@
-name: Build
-on: push
+name: Build GOD MODE EXE
+on: [push]
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - run: echo #include <windows.h> > a.cpp
-      shell: cmd
-    - run: echo int main() { return 0; } >> a.cpp
-      shell: cmd
-    - run: "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" && cl a.cpp /Fe:a.exe /EHsc
-      shell: cmd
-    - uses: actions/upload-artifact@v4
+    - uses: actions/checkout@v4
+    
+    - name: Create SIMPLE working C++ file
+      run: |
+        # Create a new simple C++ file
+        Write-Output '#include <windows.h>' | Out-File -FilePath simple.cpp -Encoding ASCII
+        Write-Output 'int main() { MessageBox(0, "GOD MODE", "Success", 0); return 0; }' | Out-File -FilePath simple.cpp -Encoding ASCII -Append
+    
+    - name: Compile
+      run: |
+        # Setup Visual Studio
+        & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64
+        
+        # Compile
+        & "cl.exe" simple.cpp /Fe:godmode.exe /EHsc
+        
+        # Check result
+        if (Test-Path "godmode.exe") {
+          Write-Host "✅ SUCCESS: EXE created"
+          Get-Item godmode.exe
+        } else {
+          Write-Host "❌ FAILED"
+          Get-ChildItem
+          exit 1
+        }
+    
+    - name: Upload EXE
+      uses: actions/upload-artifact@v4
       with:
-        name: exe-file
-        path: a.exe
+        name: GODMODE-EXECUTABLE
+        path: godmode.exe
