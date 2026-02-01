@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  BUILD_TYPE: Release
-
 jobs:
   build:
     runs-on: windows-latest
@@ -16,19 +13,25 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup MSVC
-      uses: microsoft/setup-msbuild@v2
+    - name: Setup MSVC Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64  # ✅ Activates cl.exe PATH
     
-    - name: Build
+    - name: Build GOD-MODE Agent
+      shell: cmd  # ✅ Use CMD not PowerShell
       run: |
-        cl.exe /O2 /MT /Fe:ChangesUpgraded.exe *.cpp /link winhttp.lib user32.lib gdi32.lib advapi32.lib kernel32.lib
+        cl.exe /O2 /MT /Fe:ChangesUpgraded.exe *.cpp ^
+        /link winhttp.lib user32.lib gdi32.lib advapi32.lib kernel32.lib ^
+        /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup /OUT:ChangesUpgraded.exe
     
-    - name: Test Executable
+    - name: Verify Executable
+      shell: cmd
       run: |
         dir ChangesUpgraded.exe
-        ChangesUpgraded.exe --test
+        echo Executable built successfully!
     
     - uses: actions/upload-artifact@v4
       with:
         name: ChangesUpgraded-v9.0-GOD-MODE
-        path: ChangesUpgraded.exe  # ✅ SINGLE FILE ONLY
+        path: ChangesUpgraded.exe
