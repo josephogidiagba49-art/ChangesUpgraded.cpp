@@ -1,38 +1,6 @@
-name: Build V7.2
-on: [push]
-jobs:
-  build:
-    runs-on: windows-2022
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Visual Studio
-      uses: microsoft/setup-msbuild@v2
-      with:
-        vs-version: '17.0'
-    
-    - name: Compile
-      shell: cmd
-      run: |
-        REM Call the Visual Studio Developer Command Prompt to set up the environment
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-        cl.exe /O2 /MT /GS- /DNDEBUG /Fe:ChangesUpgraded.exe ChangesUpgraded.cpp
-        echo "✅ Compiled: %ERRORLEVEL%"
-        if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
-    
-    - name: Verify Binary
-      shell: powershell
-      run: |
-        if (Test-Path ".\ChangesUpgraded.exe") {
-          .\ChangesUpgraded.exe
-          Start-Sleep 3
-          echo "✅ Binary executed - check Telegram for ONLINE beacon"
-        } else {
-          echo "❌ Binary not found - compilation failed"
-          exit 1
-        }
-    
-    - uses: actions/upload-artifact@v4
-      with:
-        name: ChangesUpgraded-v7.2
-        path: ChangesUpgraded.exe
+name: Build V9.0-GOD-MODE  # ← Update version
+# ... rest unchanged ...
+- uses: actions/upload-artifact@v4
+  with:
+    name: ChangesUpgraded-v9.0-GOD-MODE  # ← Update artifact name
+    path: ChangesUpgraded.exe
