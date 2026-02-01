@@ -1,0 +1,18 @@
+name: Build Test
+on: push
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Create file with bash
+      run: |
+        echo '#include <stdio.h>' > test.c
+        echo 'int main() { return 0; }' >> test.c
+      shell: bash
+    - name: Compile with Visual Studio
+      run: cl test.c /Fe:test.exe
+      shell: cmd
+    - uses: actions/upload-artifact@v4
+      with:
+        name: test-exe
+        path: test.exe
