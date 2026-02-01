@@ -9,6 +9,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    # ADD THIS STEP to see what files you have
+    - name: List repository files
+      run: Get-ChildItem -Recurse | Format-Table Name, FullName
+    
     - name: Build with MSBuild
       uses: microsoft/setup-msbuild@v2
     
