@@ -1,4 +1,4 @@
-name: Build EXE
+name: Build Windows EXE
 
 on: [push]
 
@@ -7,28 +7,36 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - name: Create C++ file
-      shell: cmd
+    - name: Create C++ source file
       run: |
-        echo #include <windows.h> > app.cpp
-        echo int main() { MessageBox(0, "GOD MODE", "Success", 0); return 0; } >> app.cpp
+        # PowerShell version
+        @'
+#include <windows.h>
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    MessageBox(NULL, L"GOD MODE V9.0\nBuilt with GitHub Actions", L"✅ Success", MB_OK);
+    return 0;
+}
+'@ | Out-File -FilePath "program.cpp" -Encoding ASCII
     
-    - name: Compile with Visual Studio
+    - name: Compile to EXE
       shell: cmd
       run: |
-        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64
-        cl app.cpp /Fe:godmode.exe /EHsc /nologo
+        echo Setting up Visual Studio...
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         
-        if exist godmode.exe (
-          echo ✅ SUCCESS: EXE created!
-          dir godmode.exe
+        echo Compiling...
+        cl program.cpp /Fe:program.exe /EHsc /nologo
+        
+        if exist program.exe (
+          echo COMPILATION SUCCESSFUL
+          dir program.exe
         ) else (
-          echo ❌ FAILED
+          echo COMPILATION FAILED
           exit 1
         )
     
-    - name: Upload EXE
+    - name: Upload executable
       uses: actions/upload-artifact@v4
       with:
-        name: GODMODE-EXE
-        path: godmode.exe
+        name: Windows-Program
+        path: program.exe
