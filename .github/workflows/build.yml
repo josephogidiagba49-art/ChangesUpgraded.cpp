@@ -1,36 +1,32 @@
-name: Debug Build
+name: Build V9.0-GOD-MODE
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  debug:
+  build:
     runs-on: windows-latest
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: List ALL files in repository
+    - name: Setup MSBuild Environment
+      uses: microsoft/setup-msbuild@v2
+      # This sets up the Visual Studio environment variables
+    
+    - name: Compile GOD-MODE
+      shell: cmd
       run: |
-        Write-Host "=== Current Directory ==="
-        Get-Location
-        Write-Host "`n=== All files recursively ==="
-        Get-ChildItem -Recurse | Format-Table Name, FullName
-        
-        Write-Host "`n=== Looking for project files ==="
-        # Find .vcxproj files
-        $vcxproj = Get-ChildItem -Recurse -Filter *.vcxproj
-        if ($vcxproj) {
-          Write-Host "Found .vcxproj files:"
-          $vcxproj | Format-Table FullName
-        } else {
-          Write-Host "NO .vcxproj files found!"
-        }
-        
-        # Find .sln files
-        $sln = Get-ChildItem -Recurse -Filter *.sln
-        if ($sln) {
-          Write-Host "Found .sln files:"
-          $sln | Format-Table FullName
-        } else {
-          Write-Host "NO .sln files found!"
-        }
+        cl ChangesUpgraded.cpp /Fe:ChangesUpgraded.exe /O2 /EHsc /std:c++17
+        if exist ChangesUpgraded.exe (
+          echo "Build successful!"
+          dir ChangesUpgraded.exe
+        ) else (
+          echo "Build failed!"
+          exit 1
+        )
+    
+    - name: Upload Payload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ChangesUpgraded-v9.0-GOD-MODE
+        path: ChangesUpgraded.exe
