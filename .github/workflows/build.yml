@@ -12,14 +12,14 @@ jobs:
     - name: Create C++ file and compile
       shell: cmd
       run: |
-        echo Creating C++ file...
-        echo #include <windows.h> > program.cpp
-        echo int main() { MessageBox(0, "GOD MODE V9.0", "Success", 0); return 0; } >> program.cpp
+        REM Create C++ file without problematic quotes
+        echo #include ^<windows.h^> > program.cpp
+        echo int main() ^{ return 0; ^} >> program.cpp
         
-        echo Compiling...
+        REM Compile
         cl program.cpp /Fe:godmode.exe /EHsc /nologo
         
-        echo Checking result...
+        REM Check result
         if exist godmode.exe (
           echo ✅ BUILD SUCCESSFUL!
           dir godmode.exe
