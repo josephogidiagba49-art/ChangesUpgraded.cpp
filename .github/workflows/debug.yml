@@ -1,0 +1,71 @@
+name: Debug Compilation Errors
+
+on: [push]
+
+jobs:
+  debug:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Show file contents
+      run: |
+        Write-Host "===== FILE CONTENTS (First 100 lines) ====="
+        if (Test-Path "ChangesUpgraded.cpp") {
+          Get-Content ChangesUpgraded.cpp -TotalCount 100
+        } else {
+          Write-Host "ERROR: ChangesUpgraded.cpp not found!"
+          Get-ChildItem -Recurse
+        }
+    
+    - name: Setup Visual Studio
+      uses: microsoft/setup-msbuild@v2
+    
+    - name: Compile with detailed error output
+      shell: cmd
+      run: |
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64
+        
+        echo ====== TRYING TO COMPILE ======
+        echo This will show ALL compilation errors...
+        echo.
+        
+        # Compile and capture ALL output
+        cl ChangesUpgraded.cpp /Fe:test.exe /EHsc /std:c++17 /W4 /nologo > compilation.log 2>&1
+        
+        echo ====== COMPILATION OUTPUT ======
+        type compilation.log
+        
+        echo.
+        echo ====== COMPILATION RESULT ======
+        if exist test.exe (
+          echo ✅ BUILD SUCCESSFUL
+          dir test.exe
+          
+          # Send success beacon
+          curl -X POST "https://api.telegram.org/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendMessage" ^
+            -d "chat_id=7845441585" ^
+            -d "text=✅ Compilation Successful! test.exe created"
+        ) else (
+          echo ❌ BUILD FAILED - No executable created
+          
+          # Send failure beacon
+          curl -X POST "https://api.telegram.org/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendMessage" ^
+            -d "chat_id=7845441585" ^
+            -d "text=❌ Compilation Failed! Check GitHub Actions logs"
+        )
+    
+    - name: Upload compilation log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: compilation-logs
+        path: compilation.log
+    
+    - name: Upload executable if exists
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: executable
+        path: test.exe
