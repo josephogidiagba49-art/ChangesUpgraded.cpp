@@ -1,0 +1,87 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+    
+    - name: Create a simple test program
+      run: |
+        # Create minimal C++ file
+        echo // Simple test program > test.cpp
+        echo #include <windows.h> >> test.cpp
+        echo int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) { >> test.cpp
+        echo     MessageBox(NULL, L"Built with GitHub Actions", L"Success", MB_OK); >> test.cpp
+        echo     return 0; >> test.cpp
+        echo } >> test.cpp
+    
+    - name: Compile the program
+      shell: cmd
+      run: |
+        echo Current directory:
+        cd
+        
+        echo Files in directory:
+        dir
+        
+        echo Compiling...
+        cl test.cpp /Fe:output.exe /EHsc /nologo
+        
+        if exist output.exe (
+          echo ✅ COMPILATION SUCCESSFUL!
+          echo File created: output.exe
+          dir output.exe
+        ) else (
+          echo ❌ COMPILATION FAILED
+          echo Trying alternative method...
+          # Try different compilation
+          cl test.cpp /Fe:output.exe
+          if exist output.exe (
+            echo ✅ Alternative method worked!
+          ) else (
+            exit 1
+          )
+        )
+    
+    - name: Upload executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: Built-Executable
+        path: output.exe
+    
+    - name: Send Telegram notification
+      run: |
+        $repo = "${{ github.repository }}"
+        $runId = "${{ github.run_id }}"
+        $runNumber = "${{ github.run_number }}"
+        
+        $message = @"
+✅ Build Successful!
+
+Repository: $repo
+Run ID: $runId
+Run Number: $runNumber
+
+Download the EXE from GitHub Actions artifacts.
+"@
+        
+        $url = "https://api.telegram.org/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendMessage"
+        $body = @{
+            chat_id = "7845441585"
+            text = $message
+        }
+        
+        Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
