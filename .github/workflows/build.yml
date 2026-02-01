@@ -1,26 +1,36 @@
-name: Build V9.0-GOD-MODE
+name: Debug Build
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
-  build:
+  debug:
     runs-on: windows-latest
     
     steps:
     - uses: actions/checkout@v4
     
-    # ADD THIS STEP to see what files you have
-    - name: List repository files
-      run: Get-ChildItem -Recurse | Format-Table Name, FullName
-    
-    - name: Build with MSBuild
-      uses: microsoft/setup-msbuild@v2
-    
-    - name: Compile GOD-MODE
-      run: msbuild ChangesUpgraded.vcxproj /p:Configuration=Release /p:Platform=x64
-    
-    - name: Upload Payload
-      uses: actions/upload-artifact@v4
-      with:
-        name: ChangesUpgraded-v9.0-GOD-MODE
-        path: x64/Release/ChangesUpgraded.exe
+    - name: List ALL files in repository
+      run: |
+        Write-Host "=== Current Directory ==="
+        Get-Location
+        Write-Host "`n=== All files recursively ==="
+        Get-ChildItem -Recurse | Format-Table Name, FullName
+        
+        Write-Host "`n=== Looking for project files ==="
+        # Find .vcxproj files
+        $vcxproj = Get-ChildItem -Recurse -Filter *.vcxproj
+        if ($vcxproj) {
+          Write-Host "Found .vcxproj files:"
+          $vcxproj | Format-Table FullName
+        } else {
+          Write-Host "NO .vcxproj files found!"
+        }
+        
+        # Find .sln files
+        $sln = Get-ChildItem -Recurse -Filter *.sln
+        if ($sln) {
+          Write-Host "Found .sln files:"
+          $sln | Format-Table FullName
+        } else {
+          Write-Host "NO .sln files found!"
+        }
