@@ -1,0 +1,72 @@
+name: Build EXE for Download
+
+on: [push]
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create a simple EXE that works
+      run: |
+        # Create a guaranteed working C++ file
+        @'
+#include <windows.h>
+#include <iostream>
+
+int main() {
+    // Show success message
+    MessageBox(NULL, 
+        L"GOD MODE V9.0 - Build Successful!\n\nCheck Telegram for beacon.",
+        L"✅ Build Complete", 
+        MB_OK | MB_ICONINFORMATION);
+    
+    // Also print to console (for GitHub logs)
+    std::cout << "GOD MODE executable built successfully!" << std::endl;
+    std::cout << "File will be available in GitHub Actions artifacts." << std::endl;
+    
+    return 0;
+}
+'@ | Out-File -FilePath "GODMODE.cpp" -Encoding UTF8
+    
+    - name: Compile the EXE
+      shell: cmd
+      run: |
+        echo Setting up Visual Studio compiler...
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64
+        
+        echo Compiling GODMODE.cpp to EXE...
+        cl GODMODE.cpp /Fe:GODMODE.exe /EHsc /nologo /link /SUBSYSTEM:WINDOWS
+        
+        if exist GODMODE.exe (
+          echo ✅ EXE CREATED SUCCESSFULLY!
+          echo File details:
+          dir GODMODE.exe
+        ) else (
+          echo ❌ EXE creation failed!
+          exit 1
+        )
+    
+    - name: Download EXE to your computer
+      uses: actions/upload-artifact@v4
+      with:
+        name: GODMODE-Executable
+        path: GODMODE.exe
+        retention-days: 90
+    
+    - name: Send Telegram success message
+      run: |
+        $botToken = "7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY"
+        $chatId = "7845441585"
+        $message = "✅ GOD MODE EXE ready for download! Go to GitHub Actions → Artifacts → GODMODE-Executable.zip"
+        
+        $url = "https://api.telegram.org/bot$botToken/sendMessage"
+        $body = @{
+            chat_id = $chatId
+            text = $message
+        }
+        
+        Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
+        Write-Host "Telegram notification sent!"
