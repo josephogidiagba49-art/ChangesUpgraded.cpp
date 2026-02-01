@@ -1,35 +1,37 @@
-name: Build GOD MODE EXE
-on: [push]
+name: Build EXE Properly
+on: push
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-    
-    - name: Create C++ file and compile
-      shell: cmd
+    - name: Create and compile
       run: |
-        REM Create C++ file without problematic quotes
-        echo #include ^<windows.h^> > program.cpp
-        echo int main() ^{ return 0; ^} >> program.cpp
+        # Create C++ file using PowerShell
+        @'
+#include <windows.h>
+int main() { 
+    MessageBox(0, "GOD MODE V9.0", "Success", 0); 
+    return 0; 
+}
+'@ | Out-File -FilePath program.cpp -Encoding ASCII
         
-        REM Compile
-        cl program.cpp /Fe:godmode.exe /EHsc /nologo
+        # Setup Visual Studio
+        & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         
-        REM Check result
-        if exist godmode.exe (
-          echo ✅ BUILD SUCCESSFUL!
-          dir godmode.exe
-        ) else (
-          echo ❌ Build failed
-          exit 1
-        )
+        # Compile
+        & "cl" program.cpp /Fe:godmode.exe /EHsc /nologo
+        
+        # Check
+        if (Test-Path "godmode.exe") {
+            Write-Host "✅ BUILD SUCCESSFUL!"
+            Get-Item godmode.exe
+        } else {
+            Write-Host "❌ Build failed"
+            exit 1
+        }
+      shell: pwsh
     
-    - name: Upload EXE
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
         name: GODMODE-EXE
         path: godmode.exe
