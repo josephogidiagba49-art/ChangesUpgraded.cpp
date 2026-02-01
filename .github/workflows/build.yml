@@ -1,36 +1,16 @@
-name: Build EXE
-on: [push]
+name: Build
+on: push
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - name: Create C++ file
-      shell: bash
-      run: |
-        cat > program.cpp << 'EOF'
-#include <windows.h>
-int main() {
-    MessageBox(0, "GOD MODE", "Built", 0);
-    return 0;
-}
-EOF
-    
-    - name: Compile
+    - run: echo #include <windows.h> > a.cpp
       shell: cmd
-      run: |
-        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        cl program.cpp /Fe:myapp.exe /EHsc
-        
-        if exist myapp.exe (
-          echo SUCCESS
-          dir myapp.exe
-        ) else (
-          echo FAILED
-          dir
-        )
-    
-    - name: Upload
-      uses: actions/upload-artifact@v4
+    - run: echo int main() { return 0; } >> a.cpp
+      shell: cmd
+    - run: "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" && cl a.cpp /Fe:a.exe /EHsc
+      shell: cmd
+    - uses: actions/upload-artifact@v4
       with:
-        name: myapp
-        path: myapp.exe
+        name: exe-file
+        path: a.exe
