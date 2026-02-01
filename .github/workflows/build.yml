@@ -1,36 +1,30 @@
 name: Build EXE
-on: [push, workflow_dispatch]
+on: push
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - name: Setup Visual Studio
-      uses: microsoft/setup-msbuild@v2
-      
+    - uses: ilammy/msvc-dev-cmd@v1
+    
     - name: Create C file
+      shell: cmd
       run: |
         echo #include <stdio.h> > program.c
-        echo int main() { printf("Hello"); return 0; } >> program.c
-      shell: bash
+        echo int main() { return 0; } >> program.c
     
-    - name: Find and use Visual Studio compiler
+    - name: Compile
+      shell: cmd
       run: |
-        # Activate Visual Studio environment
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        
-        # Now compile
-        cl program.c /Fe:myprogram.exe
-        
-        if exist myprogram.exe (
-          echo SUCCESS
-          dir myprogram.exe
+        cl program.c /Fe:program.exe
+        if exist program.exe (
+          echo ✅ BUILD SUCCESSFUL
+          dir program.exe
         ) else (
-          echo FAILED
+          echo ❌ BUILD FAILED
           exit 1
         )
-      shell: cmd
     
     - uses: actions/upload-artifact@v4
       with:
-        name: executable
-        path: myprogram.exe
+        name: program-exe
+        path: program.exe
