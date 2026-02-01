@@ -1,126 +1,36 @@
-name: Guaranteed EXE Builder
+name: Build EXE
 
 on: [push]
 
 jobs:
-  build-exe:
+  build:
     runs-on: windows-latest
     
     steps:
-    - name: Create SIMPLE C++ file that ALWAYS compiles
+    - name: Create C++ file
       run: |
-        # This code WILL compile 100%
-        @'
-#include <windows.h>
-#include <iostream>
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
-                   LPSTR lpCmdLine, int nCmdShow) {
-    // Hide console
-    ShowWindow(GetConsoleWindow(), SW_HIDE);
+        echo #include <windows.h> > app.cpp
+        echo int main() { return 0; } >> app.cpp
     
-    // Show message box
-    MessageBox(NULL, 
-        L"GOD MODE V9.0\n\nBuild: SUCCESSFUL\nSource: GitHub Actions",
-        L"✅ Executable Ready", 
-        MB_OK | MB_ICONINFORMATION);
-    
-    return 0;
-}
-'@ | Out-File -FilePath "build.cpp" -Encoding UTF8
-        
-    - name: Compile with Visual Studio
-      shell: cmd
+    - name: Compile
       run: |
-        echo ====== STEP 1: Setup compiler ======
-        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        # Use the Developer Command Prompt
+        "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         
-        echo ====== STEP 2: Compile ======
-        echo Compiling build.cpp...
-        cl build.cpp /Fe:GODMODE_V9.exe /EHsc /nologo /link /SUBSYSTEM:WINDOWS
+        # Compile
+        cl app.cpp /Fe:myapp.exe /EHsc
         
-        echo ====== STEP 3: Verify ======
-        if exist GODMODE_V9.exe (
-          echo ✅ EXE CREATED SUCCESSFULLY!
-          echo File details:
-          dir GODMODE_V9.exe
-          echo.
-          echo File location: %CD%\GODMODE_V9.exe
+        # Check if file exists
+        if exist myapp.exe (
+          echo SUCCESS
+          dir myapp.exe
         ) else (
-          echo ❌ EXE NOT CREATED - Trying alternative...
-          # Alternative method
-          cl build.cpp /Fe:GODMODE_V9.exe /EHsc
-          if exist GODMODE_V9.exe (
-            echo ✅ EXE created with alternative method!
-          ) else (
-            echo ❌ COMPLETE FAILURE
-            echo Listing all files:
-            dir
-            exit 1
-          )
+          echo FAILED
+          exit 1
         )
     
-    - name: Verify file exists
-      run: |
-        Write-Host "Checking if EXE exists..."
-        if (Test-Path "GODMODE_V9.exe") {
-          $file = Get-Item "GODMODE_V9.exe"
-          Write-Host "✅ VERIFIED: $($file.FullName)"
-          Write-Host "Size: $($file.Length) bytes"
-          Write-Host "Date: $($file.CreationTime)"
-        } else {
-          Write-Host "❌ FILE NOT FOUND!"
-          Write-Host "Current directory:"
-          Get-Location
-          Write-Host "All files:"
-          Get-ChildItem
-          exit 1
-        }
-    
-    - name: Upload EXE for download
+    - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: GODMODE-V9-EXECUTABLE
-        path: GODMODE_V9.exe
-        retention-days: 90
-    
-    - name: Send Telegram with direct link
-      run: |
-        $repo = "${{ github.repository }}"
-        $runId = "${{ github.run_id }}"
-        $runNumber = "${{ github.run_number }}"
-        
-        $downloadLink = "https://github.com/$repo/actions/runs/$runId"
-        
-        $message = @"
-🔥 GOD MODE V9.0 - EXECUTABLE READY
-
-✅ Build Status: SUCCESSFUL
-📁 File: GODMODE_V9.exe
-📦 Size: ~50KB Windows executable
-🔗 Download: $downloadLink
-
-INSTRUCTIONS:
-1. Click the link above
-2. Scroll to 'Artifacts' section
-3. Click 'GODMODE-V9-EXECUTABLE'
-4. Download the ZIP file
-5. Extract to get GODMODE_V9.exe
-
-⚠️ Note: Your original code had compilation errors.
-This is a working version that proves GitHub Actions can build EXEs.
-"@
-        
-        $url = "https://api.telegram.org/bot7979273216:AAEW468Fxoz0H4nwkNGH--t0DyPP2pOTFEY/sendMessage"
-        $body = @{
-            chat_id = "7845441585"
-            text = $message
-        }
-        
-        try {
-            $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
-            Write-Host "✅ Telegram sent successfully!"
-            Write-Host "Message ID: $($response.result.message_id)"
-        } catch {
-            Write-Host "⚠️ Telegram failed: $_"
-        }
+        name: myapp-exe
+        path: myapp.exe
