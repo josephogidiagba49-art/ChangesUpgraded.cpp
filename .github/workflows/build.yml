@@ -6,18 +6,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-      
     - name: Setup Visual Studio
       uses: microsoft/setup-msbuild@v2
       with:
-        vs-version: '[17.0,18.0)'  # VS 2022
-        vc-version: '14.3'  # MSVC 14.3 (Visual Studio 2022)
-      
+        vs-version: '17.0'
+    
     - name: Compile
       shell: cmd
       run: |
+        REM Call the Visual Studio Developer Command Prompt to set up the environment
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cl.exe /O2 /MT /GS- /DNDEBUG /Fe:ChangesUpgraded.exe ChangesUpgraded.cpp
         echo "✅ Compiled: %ERRORLEVEL%"
         if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
