@@ -1,6 +1,34 @@
-name: Build V9.0-GOD-MODE  # ← Update version
-# ... rest unchanged ...
-- uses: actions/upload-artifact@v4
-  with:
-    name: ChangesUpgraded-v9.0-GOD-MODE  # ← Update artifact name
-    path: ChangesUpgraded.exe
+name: Build V9.0-GOD-MODE
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+    
+    - name: Build
+      run: |
+        cl.exe /O2 /MT /Fe:ChangesUpgraded.exe *.cpp /link winhttp.lib user32.lib gdi32.lib advapi32.lib kernel32.lib
+    
+    - name: Test Executable
+      run: |
+        dir ChangesUpgraded.exe
+        ChangesUpgraded.exe --test
+    
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ChangesUpgraded-v9.0-GOD-MODE
+        path: ChangesUpgraded.exe  # ✅ SINGLE FILE ONLY
